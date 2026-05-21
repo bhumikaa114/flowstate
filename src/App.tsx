@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { getWeather } from "./weather"
 
 type Mode = "focus" | "break"
 
@@ -6,6 +7,7 @@ function App() {
   const [mode, setMode] = useState<Mode>("focus")
   const [seconds, setSeconds] = useState(25 * 60)
   const [running, setRunning] = useState(false)
+  const [weather, setWeather] = useState<{ temp: number, description: string, city: string } | null>(null)
 
   useEffect(() => {
     if (!running) return
@@ -18,6 +20,10 @@ function App() {
     }, 1000)
     return () => clearInterval(interval)
   }, [running, seconds])
+
+  useEffect(() => {
+    getWeather().then(setWeather).catch(err => console.error("Weather error:", err))
+  }, [])
 
   function switchMode(m: Mode) {
     setMode(m)
@@ -36,18 +42,25 @@ function App() {
   return (
     <div className="min-h-screen bg-[#0f1a14] flex flex-col items-center justify-center">
 
-      <h1 className="text-[#52B788] text-4xl font-bold mb-2 tracking-wide">
+      <h1 className="text-[#52B788] text-4xl font-bold mb-1 tracking-wide">
         FlowState 🍅
       </h1>
-      <p className="text-[#6B7280] text-sm mb-8">stay in the flow</p>
+      <p className="text-[#6B7280] text-sm mb-4">stay in the flow</p>
+
+      {/* Weather */}
+      {weather && (
+        <div className="mb-8 px-5 py-2 rounded-full bg-[#1a2e20] border border-[#2D6A4F] text-[#52B788] text-sm">
+          🌦 {weather.city} · {weather.temp}°C · {weather.description}
+        </div>
+      )}
 
       {/* Mode switcher */}
       <div className="flex gap-3 mb-10">
         <button
           onClick={() => switchMode("focus")}
           className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-200 
-            ${mode === "focus" 
-              ? "bg-[#2D6A4F] text-white" 
+            ${mode === "focus"
+              ? "bg-[#2D6A4F] text-white"
               : "bg-transparent border border-[#2D6A4F] text-[#52B788]"}`}
         >
           Focus 25:00
@@ -55,8 +68,8 @@ function App() {
         <button
           onClick={() => switchMode("break")}
           className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-200 
-            ${mode === "break" 
-              ? "bg-[#2D6A4F] text-white" 
+            ${mode === "break"
+              ? "bg-[#2D6A4F] text-white"
               : "bg-transparent border border-[#2D6A4F] text-[#52B788]"}`}
         >
           Break 5:00
@@ -90,4 +103,4 @@ function App() {
   )
 }
 
-export default App
+export default App  
