@@ -37,6 +37,10 @@ function App() {
   const [imgIndex, setImgIndex] = useState(0)
   const [fade, setFade] = useState(true)
   const [sessions, setSessions] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
+  const [focusMin, setFocusMin] = useState("25")
+  const [breakMin, setBreakMin] = useState("5")
+
   // Timer countdown
   useEffect(() => {
     if (!running) return
@@ -47,14 +51,14 @@ function App() {
         setSessions(newCount)
         if (newCount % 4 === 0) {
           setMode("break")
-          setSeconds(15 * 60)
+          setSeconds(Number(breakMin) * 60 * 3)
         } else {
           setMode("break")
-          setSeconds(5 * 60)
+          setSeconds(Number(breakMin) * 60)
         }
       } else {
         setMode("focus")
-        setSeconds(25 * 60)
+        setSeconds(Number(focusMin) * 60)
       }
       setRunning(true)
       return
@@ -63,14 +67,14 @@ function App() {
       setSeconds(s => s - 1)
     }, 1000)
     return () => clearInterval(interval)
-  }, [running, seconds, mode, sessions])
+  }, [running, seconds, mode, sessions, focusMin, breakMin])
 
   // Fetch real weather
   useEffect(() => {
     getWeather().then(setWeather).catch(err => console.error("Weather error:", err))
   }, [])
 
-  // Background slideshow — THIS IS THE ARRAY + MODULO IN ACTION
+  // Background slideshow
   useEffect(() => {
     const timer = setInterval(() => {
       setFade(false)
@@ -85,12 +89,23 @@ function App() {
   function switchMode(m: Mode) {
     setMode(m)
     setRunning(false)
-    setSeconds(m === "focus" ? 25 * 60 : 5 * 60)
+    setSeconds(m === "focus" ? Number(focusMin) * 60 : Number(breakMin) * 60)
   }
 
   function reset() {
     setRunning(false)
-    setSeconds(mode === "focus" ? 25 * 60 : 5 * 60)
+    setSeconds(mode === "focus" ? Number(focusMin) * 60 : Number(breakMin) * 60)
+  }
+
+  function saveSettings() {
+    const f = Math.max(1, Math.min(99, Number(focusMin)))
+    const b = Math.max(1, Math.min(99, Number(breakMin)))
+    setFocusMin(String(f))
+    setBreakMin(String(b))
+    setMode("focus")
+    setSeconds(f * 60)
+    setRunning(false)
+    setShowSettings(false)
   }
 
   const minutes = Math.floor(seconds / 60)
@@ -99,7 +114,7 @@ function App() {
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
 
-      {/* Layer 1 — Background image, fades between photos */}
+      {/* Layer 1 — Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-opacity duration-2000"
         style={{
@@ -108,33 +123,79 @@ function App() {
         }}
       />
 
-      {/* Layer 2 — Dark overlay so text stays readable */}
+      {/* Layer 2 — Dark overlay */}
       <div className="absolute inset-0 bg-black/50" />
 
-      {/* Layer 3 — All content sits on top */}
+      {/* Layer 3 — Content */}
       <div className="relative z-10 flex flex-col items-center w-full px-4">
 
-        <h1 className="text-white text-4xl font-bold mb-1 tracking-wide drop-shadow-lg">
-          FlowState 🍅
-        </h1>
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-white text-4xl font-bold tracking-wide drop-shadow-lg">
+            FlowState 🍅
+          </h1>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="text-white/50 hover:text-white text-xl transition-all duration-200"
+          >
+            ⚙️
+          </button>
+        </div>
+
+        {/* Settings panel */}
+        {showSettings && (
+          <div className="mb-4 p-4 rounded-2xl bg-black/40 backdrop-blur border border-white/20 flex flex-col items-center gap-3">
+            <p className="text-white/70 text-xs uppercase tracking-widest">Custom Timer</p>
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center gap-1">
+                <label className="text-white/50 text-xs">Focus (min)</label>
+                <input
+                  type="number"
+                  value={focusMin}
+                  onChange={e => setFocusMin(e.target.value)}
+                  className="w-16 text-center bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-white/50"
+                  min="1"
+                  max="99"
+                />
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <label className="text-white/50 text-xs">Break (min)</label>
+                <input
+                  type="number"
+                  value={breakMin}
+                  onChange={e => setBreakMin(e.target.value)}
+                  className="w-16 text-center bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-white/50"
+                  min="1"
+                  max="99"
+                />
+              </div>
+            </div>
+            <button
+              onClick={saveSettings}
+              className="px-6 py-1.5 rounded-full bg-white text-black text-sm font-semibold hover:bg-white/80 transition-all duration-200"
+            >
+              Save
+            </button>
+          </div>
+        )}
+
         <p className="text-white/60 text-sm mb-2">stay in the flow</p>
 
-{/* Session counter */}
-<div className="flex gap-2 mb-4">
-  {[1,2,3,4].map(n => (
-    <div
-      key={n}
-      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-        n <= (sessions % 4 === 0 && sessions !== 0 ? 4 : sessions % 4)
-          ? "bg-white scale-125"
-          : "bg-white/20"
-      }`}
-    />
-  ))}
-</div>
-<p className="text-white/40 text-xs mb-4">
-  {sessions} session{sessions !== 1 ? "s" : ""} completed
-</p>
+        {/* Session counter dots */}
+        <div className="flex gap-2 mb-4">
+          {[1,2,3,4].map(n => (
+            <div
+              key={n}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                n <= (sessions % 4 === 0 && sessions !== 0 ? 4 : sessions % 4)
+                  ? "bg-white scale-125"
+                  : "bg-white/20"
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-white/40 text-xs mb-4">
+          {sessions} session{sessions !== 1 ? "s" : ""} completed
+        </p>
 
         {/* Weather pill */}
         {weather && (
@@ -143,7 +204,7 @@ function App() {
           </div>
         )}
 
-        {/* Scene selector — loops over array keys */}
+        {/* Scene selector */}
         <div className="flex gap-2 mb-6">
           {(Object.keys(SCENES) as Scene[]).map(s => (
             <button
@@ -168,7 +229,7 @@ function App() {
                 ? "bg-white text-black"
                 : "bg-white/10 text-white border border-white/20"}`}
           >
-            Focus 25:00
+            Focus {focusMin}:00
           </button>
           <button
             onClick={() => switchMode("break")}
@@ -177,7 +238,7 @@ function App() {
                 ? "bg-white text-black"
                 : "bg-white/10 text-white border border-white/20"}`}
           >
-            Break 5:00
+            Break {breakMin}:00
           </button>
         </div>
 
