@@ -36,19 +36,34 @@ function App() {
   const [scene, setScene] = useState<Scene>("forest")
   const [imgIndex, setImgIndex] = useState(0)
   const [fade, setFade] = useState(true)
-
+  const [sessions, setSessions] = useState(0)
   // Timer countdown
   useEffect(() => {
     if (!running) return
     if (seconds === 0) {
       setRunning(false)
+      if (mode === "focus") {
+        const newCount = sessions + 1
+        setSessions(newCount)
+        if (newCount % 4 === 0) {
+          setMode("break")
+          setSeconds(15 * 60)
+        } else {
+          setMode("break")
+          setSeconds(5 * 60)
+        }
+      } else {
+        setMode("focus")
+        setSeconds(25 * 60)
+      }
+      setRunning(true)
       return
     }
     const interval = setInterval(() => {
       setSeconds(s => s - 1)
     }, 1000)
     return () => clearInterval(interval)
-  }, [running, seconds])
+  }, [running, seconds, mode, sessions])
 
   // Fetch real weather
   useEffect(() => {
@@ -63,7 +78,7 @@ function App() {
         setImgIndex(prev => (prev + 1) % SCENES[scene].length)
         setFade(true)
       }, 1000)
-    }, 8000)
+    }, 60000)
     return () => clearInterval(timer)
   }, [scene])
 
@@ -86,7 +101,7 @@ function App() {
 
       {/* Layer 1 — Background image, fades between photos */}
       <div
-        className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
+        className="absolute inset-0 bg-cover bg-center transition-opacity duration-2000"
         style={{
           backgroundImage: `url(${SCENES[scene][imgIndex]})`,
           opacity: fade ? 1 : 0
@@ -102,7 +117,24 @@ function App() {
         <h1 className="text-white text-4xl font-bold mb-1 tracking-wide drop-shadow-lg">
           FlowState 🍅
         </h1>
-        <p className="text-white/60 text-sm mb-4">stay in the flow</p>
+        <p className="text-white/60 text-sm mb-2">stay in the flow</p>
+
+{/* Session counter */}
+<div className="flex gap-2 mb-4">
+  {[1,2,3,4].map(n => (
+    <div
+      key={n}
+      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+        n <= (sessions % 4 === 0 && sessions !== 0 ? 4 : sessions % 4)
+          ? "bg-white scale-125"
+          : "bg-white/20"
+      }`}
+    />
+  ))}
+</div>
+<p className="text-white/40 text-xs mb-4">
+  {sessions} session{sessions !== 1 ? "s" : ""} completed
+</p>
 
         {/* Weather pill */}
         {weather && (
