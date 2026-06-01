@@ -33,13 +33,21 @@ function App() {
   const [seconds, setSeconds] = useState(25 * 60)
   const [running, setRunning] = useState(false)
   const [weather, setWeather] = useState<{ temp: number, description: string, city: string } | null>(null)
-  const [scene, setScene] = useState<Scene>("forest")
   const [imgIndex, setImgIndex] = useState(0)
   const [fade, setFade] = useState(true)
-  const [sessions, setSessions] = useState(0)
+  const [sessions, setSessions] = useState(() => {
+    return Number(localStorage.getItem("fs_sessions") || "0")
+  })
   const [showSettings, setShowSettings] = useState(false)
-  const [focusMin, setFocusMin] = useState("25")
-  const [breakMin, setBreakMin] = useState("5")
+  const [focusMin, setFocusMin] = useState(() => {
+    return localStorage.getItem("fs_focusMin") || "25"
+  })
+  const [breakMin, setBreakMin] = useState(() => {
+    return localStorage.getItem("fs_breakMin") || "5"
+  })
+  const [scene, setScene] = useState<Scene>(() => {
+    return (localStorage.getItem("fs_scene") as Scene) || "forest"
+  })
 
   // Timer countdown
   useEffect(() => {
@@ -84,6 +92,22 @@ function App() {
       }, 1000)
     }, 60000)
     return () => clearInterval(timer)
+  }, [scene])
+
+  // Save sessions to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("fs_sessions", String(sessions))
+  }, [sessions])
+
+  // Save focus and break minutes whenever they change
+  useEffect(() => {
+    localStorage.setItem("fs_focusMin", focusMin)
+    localStorage.setItem("fs_breakMin", breakMin)
+  }, [focusMin, breakMin])
+
+  // Save scene whenever it changes
+  useEffect(() => {
+    localStorage.setItem("fs_scene", scene)
   }, [scene])
 
   function switchMode(m: Mode) {
@@ -193,9 +217,21 @@ function App() {
             />
           ))}
         </div>
-        <p className="text-white/40 text-xs mb-4">
+
+        <p className="text-white/40 text-xs mb-2">
           {sessions} session{sessions !== 1 ? "s" : ""} completed
         </p>
+        {sessions > 0 && (
+          <button
+            onClick={() => {
+              setSessions(0)
+              localStorage.setItem("fs_sessions", "0")
+            }}
+            className="text-white/20 hover:text-white/50 text-xs mb-4 transition-all duration-200"
+          >
+            reset progress
+          </button>
+        )}
 
         {/* Weather pill */}
         {weather && (
