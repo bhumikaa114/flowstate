@@ -35,6 +35,7 @@ function App() {
   const [weather, setWeather] = useState<{ temp: number, description: string, city: string } | null>(null)
   const [imgIndex, setImgIndex] = useState(0)
   const [fade, setFade] = useState(true)
+  const [muted, setMuted] = useState(false)
   const [sessions, setSessions] = useState(() => {
     return Number(localStorage.getItem("fs_sessions") || "0")
   })
@@ -54,6 +55,7 @@ function App() {
     if (!running) return
     if (seconds === 0) {
       setRunning(false)
+      playDing()
       if (mode === "focus") {
         const newCount = sessions + 1
         setSessions(newCount)
@@ -94,18 +96,18 @@ function App() {
     return () => clearInterval(timer)
   }, [scene])
 
-  // Save sessions to localStorage whenever it changes
+  // Save sessions to localStorage
   useEffect(() => {
     localStorage.setItem("fs_sessions", String(sessions))
   }, [sessions])
 
-  // Save focus and break minutes whenever they change
+  // Save focus and break minutes
   useEffect(() => {
     localStorage.setItem("fs_focusMin", focusMin)
     localStorage.setItem("fs_breakMin", breakMin)
   }, [focusMin, breakMin])
 
-  // Save scene whenever it changes
+  // Save scene
   useEffect(() => {
     localStorage.setItem("fs_scene", scene)
   }, [scene])
@@ -130,6 +132,28 @@ function App() {
     setSeconds(f * 60)
     setRunning(false)
     setShowSettings(false)
+  }
+
+  function playDing() {
+    if (muted) return
+    const ctx = new AudioContext()
+
+    function beep(startTime: number) {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      osc.type = "sine"
+      gain.gain.setValueAtTime(0.3, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4)
+      osc.start(startTime)
+      osc.stop(startTime + 0.4)
+    }
+
+    beep(ctx.currentTime)
+    beep(ctx.currentTime + 0.5)
+    beep(ctx.currentTime + 1.0)
   }
 
   const minutes = Math.floor(seconds / 60)
@@ -162,6 +186,12 @@ function App() {
             className="text-white/50 hover:text-white text-xl transition-all duration-200"
           >
             ⚙️
+          </button>
+          <button
+            onClick={() => setMuted(!muted)}
+            className="text-white/50 hover:text-white text-xl transition-all duration-200"
+          >
+            {muted ? "🔇" : "🔔"}
           </button>
         </div>
 
@@ -206,7 +236,7 @@ function App() {
 
         {/* Session counter dots */}
         <div className="flex gap-2 mb-4">
-          {[1,2,3,4].map(n => (
+          {[1, 2, 3, 4].map(n => (
             <div
               key={n}
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
@@ -278,12 +308,14 @@ function App() {
           </button>
         </div>
 
-        {/* Timer circle */}
-        <div className="w-64 h-64 rounded-full border-4 border-white/30 bg-black/30 backdrop-blur flex items-center justify-center mb-8 shadow-2xl">
-          <span className="text-white text-6xl font-mono font-bold drop-shadow-lg">
-            {minutes}:{secs < 10 ? "0" + secs : secs}
-          </span>
-        </div>
+      
+       {/* Timer — no circle, big and clean */}
+    <div className="flex items-center justify-center mb-8">
+  <span className="text-white font-mono font-bold drop-shadow-lg"
+    style={{ fontSize: "clamp(60px, 10vw, 120px)" }}>
+    {minutes}:{secs < 10 ? "0" + secs : secs}
+  </span>
+</div>
 
         {/* Buttons */}
         <div className="flex gap-4">
